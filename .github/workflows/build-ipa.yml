@@ -37,12 +37,14 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
-            -derivedDataPath build 2>&1 | tee ../xcodebuild.log
+            -derivedDataPath build
 
       - name: Package .ipa for Sideloadly
         run: |
           mkdir -p Payload
-          cp -r ios/build/Build/Products/Release-iphoneos/IPhoneAgent.app Payload/
+          APP_PATH=$(find ios/build -name "*.app" | grep -v "AgentActivity" | head -n 1)
+          echo "Found app at: $APP_PATH"
+          cp -r "$APP_PATH" Payload/
           zip -qr ESP32Agent.ipa Payload
           ls -lh ESP32Agent.ipa
 
@@ -52,11 +54,3 @@ jobs:
           name: ESP32Agent-IPA
           path: ESP32Agent.ipa
           retention-days: 7
-
-      - name: Upload build log if failed
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-log
-          path: xcodebuild.log
-          retention-days: 3
