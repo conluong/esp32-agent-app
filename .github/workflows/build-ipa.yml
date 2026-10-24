@@ -14,14 +14,7 @@ jobs:
 
       - name: Select Xcode
         run: |
-          ls -la /Applications/ | grep -i xcode || true
-          if [ -d "/Applications/Xcode_16.0.app" ]; then
-            sudo xcode-select -s /Applications/Xcode_16.0.app
-          elif [ -d "/Applications/Xcode_16.app" ]; then
-            sudo xcode-select -s /Applications/Xcode_16.app
-          elif [ -d "/Applications/Xcode_15.4.app" ]; then
-            sudo xcode-select -s /Applications/Xcode_15.4.app
-          fi
+          sudo xcode-select -s /Applications/Xcode_16.0.app || sudo xcode-select -s /Applications/Xcode_15.4.app || true
           xcodebuild -version
 
       - name: Install XcodeGen
@@ -35,6 +28,7 @@ jobs:
 
       - name: Build unsigned .app
         run: |
+          set -o pipefail
           xcodebuild clean build \
             -project ios/IPhoneAgent.xcodeproj \
             -scheme IPhoneAgent \
@@ -43,7 +37,12 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
-            -derivedDataPath build
+            PROVISIONING_PROFILE_SPECIFIER="" \
+            -derivedDataPath build 2>&1 | tee xcodebuild.log || {
+              echo "=== BUILD FAILED: LOG TAIL ==="
+              tail -n 80 xcodebuild.log
+              exit 1
+            }
 
       - name: Package .ipa for Sideloadly
         run: |
